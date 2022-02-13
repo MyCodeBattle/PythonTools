@@ -1,2 +1,2 @@
 # PythonTools
-一些小公举合计
+一些 Python 小工具。
