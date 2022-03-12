@@ -1,4 +1,4 @@
-from calculate.ui.SplitUI import *
+from ui.SplitUI import *
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 import pandas as pd
@@ -14,7 +14,7 @@ class Split(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle('Excel Utils for choose v2.1')
+        self.setWindowTitle('Excel Utils for choose v2.2')
         self.ui.loadButton.clicked.connect(self.__loadExcel)
         self.ui.sheetComboBox.activated[str].connect(self.__loadSheets)
         self.ui.splitButton.clicked.connect(self.__splitFields)
@@ -23,6 +23,10 @@ class Split(QMainWindow):
         self.ui.feeLoadButton.clicked.connect(self.__loadFeeExcel)
         self.ui.calTransFeeButton.clicked.connect(self.__calTransFee)
         self.ui.totalCalculate.clicked.connect(self.__calMuchFee)
+        self.ui.mergeNumberButton.clicked.connect(self.__mergeDh)   # 合并编码
+        
+        self.__df = None
+        self.__dfs = None
 
     def __calMuchFee(self):
         '''
@@ -78,9 +82,12 @@ class Split(QMainWindow):
         self.ui.addressComboBox.addItems(self.__df.columns)
 
     def __loadExcel(self):
-        path = self.ui.lineEdit.text()
-        self.__dfs: dict = pd.read_excel(path, dtype=str, sheet_name=None)
-        self.ui.sheetComboBox.addItems(list(self.__dfs.keys()))
+        try:
+            path = self.ui.lineEdit.text()
+            self.__dfs: dict = pd.read_excel(path, dtype=str, sheet_name=None)
+            self.ui.sheetComboBox.addItems(list(self.__dfs.keys()))
+        except FileNotFoundError as e:
+            QMessageBox.information(self, '错误', '文件不存在！', QMessageBox.Yes, QMessageBox.Yes)
 
     def __loadFeeExcel(self):
         path = self.ui.feeFilePathEdit.text()
@@ -199,6 +206,35 @@ class Split(QMainWindow):
             QMessageBox.information(self, '失败', '文件写入失败', QMessageBox.Yes, QMessageBox.Yes)
             return
         QMessageBox.information(self, '成功', '运费已计算完成', QMessageBox.Yes, QMessageBox.Yes)
+
+    def __mergeDh(self):
+        '''
+        合并单号和编码
+        :return:
+        '''
+
+        try:
+            c = self.__df.columns
+        except Exception as e:
+            QMessageBox.information(self, '错误', '要点一下需要加载的 Sheet！', QMessageBox.Yes, QMessageBox.Yes)
+            return
+
+        if '商品名称' not in c or '商品编码' not in c or '数量' not in c or '快递单号' not in c:
+            QMessageBox.information(self, '错误', '请检查表内是否有「商品名称」、「商品编码」、「快递单号」、「数量」字段！', QMessageBox.Yes, QMessageBox.Yes)
+            return
+
+        gps = self.__df.groupby('快递单号')
+        totalDf = []
+
+        for dh, curDf in gps:
+            curDf['合计'] = curDf['商品名称'] + '*' + curDf['数量']
+            curDf['合计编码'] = curDf['商品编码'] + '*' + curDf['数量']
+            names = ','.join(curDf['合计'].values)
+            no = ','.join(curDf['合计编码'].values)
+            totalDf.append({'快递单号': dh, '货品摘要': names, '商家编码': no})
+
+        pd.DataFrame(totalDf).to_excel(f'合并货品和编码.xlsx', index=False)
+        QMessageBox.information(self, '成功', '编码已合并完成！', QMessageBox.Yes, QMessageBox.Yes)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

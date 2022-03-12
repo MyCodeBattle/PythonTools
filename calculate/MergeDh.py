@@ -13,4 +13,4 @@ for dh, curDf in gps:
     totalDf.append({'快递单号': dh, '货品摘要': names, '商家编码': no})
 
 
-pd.DataFrame(totalDf).to_excel('MergeName.xlsx', index=False)
+pd.DataFrame(totalDf).to_excel(f'合并货品和编码.xlsx', index=False)
