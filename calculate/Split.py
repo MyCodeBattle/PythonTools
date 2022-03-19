@@ -91,7 +91,7 @@ class Split(QMainWindow):
 
     def __loadFeeExcel(self):
         path = self.ui.feeFilePathEdit.text()
-        self.__feeDf = pd.read_excel(path, index_col='地区', dtype=str)
+        self.__feeDfs = pd.read_excel(path, index_col='地区', dtype=str)
         QMessageBox.information(self, '成功', '运费已导入', QMessageBox.Yes, QMessageBox.Yes)
 
     def __calPaperBoxFee(self):
@@ -103,8 +103,7 @@ class Split(QMainWindow):
 
         if '包材（五层纸箱）' in self.__df.columns:
             self.__df['计算包装'] = self.__df['包材（五层纸箱）'].replace({'4': 2.1, '5': 1.4, '6': 1.2, '7': 1, '8': 0.8, '9': 0.72, '10': 0.59, '11': 0.47, '12': 0.36})
-        else:
-            self.__df['计算包装'] = self.__df['包材（三层纸箱）'].replace([str(i) for i in range(4, 13)], [1.3, 0.95, 0.78, 0.62, 0.48, 0.43, 0.33, 0.27, 0.22])
+            # TODO 替换包材费
 
     def __calDeliveryFee(self):
         '''
@@ -169,26 +168,13 @@ class Split(QMainWindow):
                 if math.isnan(wei):
                     fee = 0
                 else:
-                    if wei > 0.5:
-                        wei = math.ceil(float(row[weighField]))
-                    if wei <= 0.5:  # 东莞的直接看成1
-                        if area == '长沙仓':
-                            level = '0.5档'
-                        else:
-                            level = '1档'
-                    elif wei <= 1:
-                        level = '1档'
-                    elif wei <= 2:
-                        level = '2档'
-                    elif wei <= 3:
-                        level = '3档'
-                    else:
-                        level = 'depends'
-
-                    if '长沙' in area:
-                        info = self.__feeDf.loc[add, level]
-                    else:
-                        info = self.__feeDf.loc[expressCompany, level]    # 东莞按快递公司算快递费
+                    for gap in self.__df.columns:
+                        if eval(gap):
+                            if '东莞' not in area:
+                                info = self.__feeDfs[area].loc[add, gap]
+                            else:
+                                info = self.__feeDf.loc[expressCompany, gap]    # 东莞按快递公司算快递费
+                            break
 
                     fee = eval(info)
                     if '东莞' in area and add == '新疆':
