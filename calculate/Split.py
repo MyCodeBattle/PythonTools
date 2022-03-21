@@ -1,4 +1,5 @@
 from ui.SplitUI import *
+import pathlib
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 import pandas as pd
@@ -6,6 +7,7 @@ import tqdm
 import math
 import traceback
 from loguru import logger
+import arrow
 
 
 class Split(QMainWindow):
@@ -14,19 +16,25 @@ class Split(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle('Excel Utils for choose v2.2')
+        self.setWindowTitle('Excel Utils for choose v3.1 by zhuolx')
         self.ui.loadButton.clicked.connect(self.__loadExcel)
         self.ui.sheetComboBox.activated[str].connect(self.__loadSheets)
         self.ui.splitButton.clicked.connect(self.__splitFields)
         self.ui.openButton.clicked.connect(self.__openFileDialog)
         self.ui.openButton_2.clicked.connect(self.__openFeeFile) #打开运费文件框
         self.ui.feeLoadButton.clicked.connect(self.__loadFeeExcel)
-        self.ui.calTransFeeButton.clicked.connect(self.__calTransFee)
-        self.ui.totalCalculate.clicked.connect(self.__calMuchFee)
+        self.ui.totalCalculate.clicked.connect(self.__calTotalFee)
         self.ui.mergeNumberButton.clicked.connect(self.__mergeDh)   # 合并编码
+
+        self.__weighField = ''
+        self.__addressField = ''
         
         self.__df = None
         self.__dfs = None
+        self.__feeDfs = None    #运费模板
+        self.__paperBoxFeeDfs = None    #包材
+        self.__packFeeDfs = None  #人工
+        self.__valueAddDfs = None   #加钱！
 
     def __calMuchFee(self):
         '''
@@ -44,8 +52,8 @@ class Split(QMainWindow):
         self.ui.lineEdit.setText(files)
 
     def __openFeeFile(self):
-        files, _ = QFileDialog.getOpenFileName(self, '选择打开文件', '.', 'All Files (*);;Excel (*.xls)')
-        self.ui.feeFilePathEdit.setText(files)
+        dire = QFileDialog.getExistingDirectory(self, '打开文件夹', '.')
+        self.ui.feeFilePathEdit.setText(dire)
 
     def __splitFields(self):
         total = pd.DataFrame()
@@ -84,39 +92,55 @@ class Split(QMainWindow):
     def __loadExcel(self):
         try:
             path = self.ui.lineEdit.text()
-            self.__dfs: dict = pd.read_excel(path, dtype=str, sheet_name=None)
+            self.__dfs: dict = pd.read_excel(path, dtype={'订单编号': str, '原始单号': str, '纸箱型号': str}, sheet_name=None)
             self.ui.sheetComboBox.addItems(list(self.__dfs.keys()))
         except FileNotFoundError as e:
             QMessageBox.information(self, '错误', '文件不存在！', QMessageBox.Yes, QMessageBox.Yes)
 
     def __loadFeeExcel(self):
-        path = self.ui.feeFilePathEdit.text()
-        self.__feeDfs = pd.read_excel(path, index_col='地区', dtype=str)
-        QMessageBox.information(self, '成功', '运费已导入', QMessageBox.Yes, QMessageBox.Yes)
-
-    def __calPaperBoxFee(self):
         '''
-        计算包材
+        导入运费、包材费、人工费
         :return:
         '''
-        logger.info('计算包材...')
+        path = self.ui.feeFilePathEdit.text()
+        self.__feeDfs = pd.read_excel(pathlib.Path(path).joinpath('运费.xlsx'),sheet_name=None, dtype=str)
+        self.__paperBoxFeeDfs = pd.read_excel(pathlib.Path(path).joinpath('包材费.xlsx'), sheet_name=None, dtype=str)
+        self.__packFeeDfs = pd.read_excel(pathlib.Path(path).joinpath('打包费.xlsx'), sheet_name=None, dtype=str)
+        self.__valueAddDfs = pd.read_excel(pathlib.Path(path).joinpath('增值服务费.xlsx'), sheet_name=None, dtype=str)
+        QMessageBox.information(self, '成功', '四个费用已导入', QMessageBox.Yes, QMessageBox.Yes)
+        logger.success('费用导入成功...')
 
-        if '包材（五层纸箱）' in self.__df.columns:
-            self.__df['计算包装'] = self.__df['包材（五层纸箱）'].replace({'4': 2.1, '5': 1.4, '6': 1.2, '7': 1, '8': 0.8, '9': 0.72, '10': 0.59, '11': 0.47, '12': 0.36})
-            # TODO 替换包材费
+    def __calPaperBoxFee(self, row):
+        '''
+        计算包材
+        :param row 处理的行
+        :return:
+        '''
+        try:
+            curFeeDf = self.__paperBoxFeeDfs[row['仓库']]
+            ntype = row['纸箱型号']
+            return float(curFeeDf[curFeeDf['类型'] == ntype]['费用'].values[0])
+        except Exception as e:
+            traceback.print_exc()
+            return 99999
 
-    def __calDeliveryFee(self):
+    def __calDeliveryFee(self, row) -> float:
         '''
         北京加1块，上海加0.5块
         :return:
         '''
-        logger.info('计算北京上海加钱...')
+        try:
+            curFeeDf = self.__valueAddDfs[row['仓库']]
+            fee = 0
+            add = row[self.__addressField].split()[0]
+            if add in curFeeDf.columns:
+                fee = curFeeDf[add].values[0]
+            return float(fee)
+        except Exception as e:
+            traceback.print_exc()
+            return 999999
 
-        self.__df['北京上海加钱'] = 0
-        self.__df.loc[(self.__df['省市区'].str.startswith('北京')) & (self.__df['仓库'] == '长沙仓'), '北京上海加钱'] = 1
-        self.__df.loc[(self.__df['省市区'].str.startswith('上海')) & (self.__df['仓库'] == '长沙仓'), '北京上海加钱'] = 0.5
-
-    def __calPackFee(self):
+    def __calPackFee(self, row):
         '''
         打包费
         0-1 0.2
@@ -126,68 +150,91 @@ class Split(QMainWindow):
         4件以上 每件加0.1
         :return:
         '''
-        logger.info('计算打包费...')
-
-        lis = []
-        cur = 99999
-        for _, row in self.__df[['结算重量', '货品数量']].iterrows():
-            wei = math.ceil(float(row['结算重量']))
-            if wei <= 1:
-                cur = 0.2
-            elif wei <= 2:
-                cur = 0.3
-            elif wei <= 3:
-                cur = 0.4
-            else:
-                cur = 0.5
-            if int(row['货品数量']) > 3:
-                cur += 0.1 * (int(row['货品数量']) - 3)
-            lis.append(cur)
-        self.__df['计算人工'] = lis
-
-    def __calTransFee(self):
-        weighField = self.ui.weighComboBox.currentText()
-        addressField = self.ui.addressComboBox.currentText()
-
-        lis = []
-        for _, row in self.__df.iterrows():
-            add = row[addressField].split()[0][:2]
-            area = row['仓库']
-            expressCompany = row['物流公司']
-            if '中通' in expressCompany:
-                expressCompany = '中通'
-            elif '极兔' in expressCompany:
-                expressCompany = '极兔'
-            else:
-                expressCompany = '百世'
-
-            try:
-                wei = float(row[weighField])
-                # 东莞仓新疆12元
-
-                if math.isnan(wei):
-                    fee = 0
-                else:
-                    for gap in self.__df.columns:
-                        if eval(gap):
-                            if '东莞' not in area:
-                                info = self.__feeDfs[area].loc[add, gap]
-                            else:
-                                info = self.__feeDf.loc[expressCompany, gap]    # 东莞按快递公司算快递费
-                            break
-
-                    fee = eval(info)
-                    if '东莞' in area and add == '新疆':
-                        fee = 12 * wei
-
-            except Exception as e:
-                traceback.print_exc()
-                print(add)
-                fee = 999999
-            lis.append(fee)
-        self.__df = pd.concat([self.__df, pd.Series(data=lis, name='运费自动计算')], axis=1)
         try:
-            self.__df.to_excel('运费生成.xlsx', index=False)
+            curFeeDf = self.__packFeeDfs[row['仓库']]
+
+            cur = 0
+            wei = math.ceil(float(row[self.ui.weighComboBox.currentText()]))
+            quantity = int(row['货品数量'])
+
+            for gap in curFeeDf.columns:
+                if eval(gap):
+                    info = eval(curFeeDf[gap].values[0])
+                    cur += info
+            return cur
+        except Exception as e:
+            traceback.print_exc()
+            return 9999999
+
+    def __calTransFee(self, row, addressField, weighField) -> int:
+        '''
+        计算快递费
+        :param row: 当前处理的行
+        :param addressField: 地址字段
+        :param weighField: 重量字段
+        :return: 快递费 int
+        '''
+        add = row[addressField].split()[0][:2]
+        area = row['仓库']
+        expressCompany = row['物流公司']
+        if '中通' in expressCompany:
+            expressCompany = '中通'
+        elif '极兔' in expressCompany:
+            expressCompany = '极兔'
+        else:
+            expressCompany = '百世'
+
+        curFeeDf = self.__feeDfs[area].set_index('地区')
+        try:
+            wei = math.ceil(float(row[weighField]))
+            # 东莞仓新疆12元
+
+            if math.isnan(wei):
+                fee = 0
+            else:
+                for gap in curFeeDf:
+                    if eval(gap):
+                        if '东莞' not in area:  # 东莞以外的用地址来算
+                            info = curFeeDf.loc[add, gap]
+                        else:
+                            info = curFeeDf.loc[expressCompany, gap]  # 东莞按快递公司算快递费
+                        break
+
+                fee = eval(info)
+                if '东莞' in area and add == '新疆':
+                    fee = 12 * wei
+            return fee
+        except Exception as e:
+            QMessageBox.information(self, '失败', '计算运费出现问题', QMessageBox.Yes, QMessageBox.Yes)
+            traceback.print_exc()
+            return 9999999999
+
+    def __calTotalFee(self):
+        '''
+        计算快递费，具体条件写在excel里
+        :return:
+        '''
+        self.__weighField = self.ui.weighComboBox.currentText()
+        self.__addressField = self.ui.addressComboBox.currentText()
+
+        l1 = []
+        l2 = []
+        l3 = []
+        l4 = []
+        for _, row in self.__df.iterrows():
+            transFee = self.__calTransFee(row, self.__addressField, self.__weighField)
+            paperBoxFee = self.__calPaperBoxFee(row)
+            packFee = self.__calPackFee(row)
+            valueAddFee = self.__calDeliveryFee(row)
+
+            l1.append(transFee)
+            l2.append(paperBoxFee)
+            l3.append(packFee)
+            l4.append(valueAddFee)
+        apDf = pd.DataFrame({'运费计算': l1, '包材费计算': l2, '打包费计算': l3, '增值服务计算': l4})
+        self.__df = pd.concat([self.__df, apDf], axis=1)
+        try:
+            self.__df.to_excel(f'终极生成-{arrow.now().minute}.xlsx', index=False)
         except Exception as e:
             QMessageBox.information(self, '失败', '文件写入失败', QMessageBox.Yes, QMessageBox.Yes)
             return
