@@ -10,7 +10,12 @@ from loguru import logger
 import arrow
 
 
+
+
 class Split(QMainWindow):
+
+    def showBox(self, msg):
+        QMessageBox.information(self, '有问题', msg, QMessageBox.Yes, QMessageBox.Yes)
 
     def __init__(self):
         super().__init__()
@@ -36,16 +41,7 @@ class Split(QMainWindow):
         self.__packFeeDfs = None  #人工
         self.__valueAddDfs = None   #加钱！
 
-    def __calMuchFee(self):
-        '''
-        混合计算
-        :return:
-        '''
-
-        self.__calPackFee()
-        self.__calPaperBoxFee()
-        self.__calDeliveryFee()
-        self.__calTransFee()
+        self.INF = 9999999
 
     def __openFileDialog(self):
         files, _ = QFileDialog.getOpenFileName(self, '选择打开文件', '.', 'All Files (*);;Excel (*.xls)')
@@ -78,7 +74,7 @@ class Split(QMainWindow):
 
     def __loadSheets(self):
         sht = self.ui.sheetComboBox.currentText()
-        self.__df = self.__dfs[sht]
+        self.__df = self.__dfs[sht].fillna('')
 
         self.ui.snComboBox.clear()
         self.ui.thingComboBox.clear()
@@ -122,7 +118,7 @@ class Split(QMainWindow):
             return float(curFeeDf[curFeeDf['类型'] == ntype]['费用'].values[0])
         except Exception as e:
             traceback.print_exc()
-            return 99999
+            return self.INF
 
     def __calDeliveryFee(self, row) -> float:
         '''
@@ -138,7 +134,7 @@ class Split(QMainWindow):
             return float(fee)
         except Exception as e:
             traceback.print_exc()
-            return 999999
+            return self.INF
 
     def __calPackFee(self, row):
         '''
@@ -164,7 +160,7 @@ class Split(QMainWindow):
             return cur
         except Exception as e:
             traceback.print_exc()
-            return 9999999
+            return self.INF
 
     def __calTransFee(self, row, addressField, weighField) -> int:
         '''
@@ -174,7 +170,17 @@ class Split(QMainWindow):
         :param weighField: 重量字段
         :return: 快递费 int
         '''
-        add = row[addressField].split()[0][:2]
+        if not self.__feeDfs:
+            self.showBox('运费文件为空，是不是忘了点载入了？')
+            raise Exception('运费为空')
+
+        add = row[addressField].split()
+        if not add:     #有地址是空的
+            return self.INF
+        else:
+            add = add[0][:2]
+        # logger.info(row[addressField])
+
         area = row['仓库']
         expressCompany = row['物流公司']
         if '中通' in expressCompany:
@@ -186,7 +192,9 @@ class Split(QMainWindow):
 
         curFeeDf = self.__feeDfs[area].set_index('地区')
         try:
-            wei = math.ceil(float(row[weighField]))
+            wei = float(row[weighField])
+            if wei > 3:
+                wei = math.ceil(wei)
             # 东莞仓新疆12元
 
             if math.isnan(wei):
@@ -207,7 +215,7 @@ class Split(QMainWindow):
         except Exception as e:
             QMessageBox.information(self, '失败', '计算运费出现问题', QMessageBox.Yes, QMessageBox.Yes)
             traceback.print_exc()
-            return 9999999999
+            return self.INF
 
     def __calTotalFee(self):
         '''
@@ -221,18 +229,23 @@ class Split(QMainWindow):
         l2 = []
         l3 = []
         l4 = []
-        for _, row in self.__df.iterrows():
-            transFee = self.__calTransFee(row, self.__addressField, self.__weighField)
-            paperBoxFee = self.__calPaperBoxFee(row)
-            packFee = self.__calPackFee(row)
-            valueAddFee = self.__calDeliveryFee(row)
+        try:
+            for _, row in self.__df.iterrows():
+                transFee = self.__calTransFee(row, self.__addressField, self.__weighField)
+                paperBoxFee = self.__calPaperBoxFee(row)
+                packFee = self.__calPackFee(row)
+                valueAddFee = self.__calDeliveryFee(row)
 
-            l1.append(transFee)
-            l2.append(paperBoxFee)
-            l3.append(packFee)
-            l4.append(valueAddFee)
-        apDf = pd.DataFrame({'运费计算': l1, '包材费计算': l2, '打包费计算': l3, '增值服务计算': l4})
-        self.__df = pd.concat([self.__df, apDf], axis=1)
+                l1.append(transFee)
+                l2.append(paperBoxFee)
+                l3.append(packFee)
+                l4.append(valueAddFee)
+            apDf = pd.DataFrame({'运费计算': l1, '包材费计算': l2, '打包费计算': l3, '增值服务计算': l4})
+            self.__df = pd.concat([self.__df, apDf], axis=1)
+        except Exception as e:
+            traceback.print_exc()
+            return
+
         try:
             self.__df.to_excel(f'终极生成-{arrow.now().minute}.xlsx', index=False)
         except Exception as e:
