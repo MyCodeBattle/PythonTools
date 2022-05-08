@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>681</width>
+    <width>697</width>
     <height>548</height>
    </rect>
   </property>
@@ -145,9 +145,37 @@
        <widget class="QComboBox" name="addressComboBox"/>
       </item>
       <item>
+       <widget class="QCheckBox" name="isCalTransFee">
+        <property name="text">
+         <string>运费</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="isCalPaperBoxFee">
+        <property name="text">
+         <string>包材费</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="isCalPackFee">
+        <property name="text">
+         <string>打包费</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="isCalValueAddFee">
+        <property name="text">
+         <string>城市加钱</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="totalCalculate">
         <property name="text">
-         <string>混合计算</string>
+         <string>计算</string>
         </property>
        </widget>
       </item>
@@ -167,7 +195,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>681</width>
+     <width>697</width>
      <height>24</height>
     </rect>
    </property>

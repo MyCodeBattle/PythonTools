@@ -15,7 +15,10 @@ import arrow
 class Split(QMainWindow):
 
     def showBox(self, msg):
-        QMessageBox.information(self, '有问题', msg, QMessageBox.Yes, QMessageBox.Yes)
+        QMessageBox.information(self, '提示', msg, QMessageBox.Yes, QMessageBox.Yes)
+
+    def showErrorBox(self, msg):
+        QMessageBox.Warning(self, '有问题', msg, QMessageBox.Yes, QMessageBox.Yes)
 
     def __init__(self):
         super().__init__()
@@ -115,9 +118,10 @@ class Split(QMainWindow):
         try:
             curFeeDf = self.__paperBoxFeeDfs[row['仓库']]
             ntype = row['纸箱型号']
-            return float(curFeeDf[curFeeDf['类型'] == ntype]['费用'].values[0])
+            return round(float(curFeeDf[curFeeDf['类型'] == ntype]['费用'].values[0]), 2)
         except Exception as e:
             traceback.print_exc()
+            self.showBox('可能存在型号为空的数据')
             return self.INF
 
     def __calDeliveryFee(self, row) -> float:
@@ -131,7 +135,7 @@ class Split(QMainWindow):
             add = row[self.__addressField].split()[0]
             if add in curFeeDf.columns:
                 fee = curFeeDf[add].values[0]
-            return float(fee)
+            return round(float(fee), 2)
         except Exception as e:
             traceback.print_exc()
             return self.INF
@@ -157,7 +161,7 @@ class Split(QMainWindow):
                 if eval(gap):
                     info = eval(curFeeDf[gap].values[0])
                     cur += info
-            return cur
+            return round(cur, 2)
         except Exception as e:
             traceback.print_exc()
             return self.INF
@@ -183,6 +187,7 @@ class Split(QMainWindow):
 
         area = row['仓库']
         expressCompany = row['物流公司']
+
         if '中通' in expressCompany:
             expressCompany = '中通'
         elif '极兔' in expressCompany:
@@ -193,8 +198,6 @@ class Split(QMainWindow):
         curFeeDf = self.__feeDfs[area].set_index('地区')
         try:
             wei = float(row[weighField])
-            if wei > 3:
-                wei = math.ceil(wei)
             # 东莞仓新疆12元
 
             if math.isnan(wei):
@@ -202,16 +205,16 @@ class Split(QMainWindow):
             else:
                 for gap in curFeeDf:
                     if eval(gap):
-                        if '东莞' not in area:  # 东莞以外的用地址来算
+                        if add in curFeeDf.index:
                             info = curFeeDf.loc[add, gap]
-                        else:
+                        elif expressCompany in curFeeDf.index:
                             info = curFeeDf.loc[expressCompany, gap]  # 东莞按快递公司算快递费
-                        break
+                        else:
+                            self.showErrorBox('找不到地址对应的运费')
+                            raise Exception('计算出错')
 
                 fee = eval(info)
-                if '东莞' in area and add == '新疆':
-                    fee = 12 * wei
-            return fee
+            return round(fee, 2)
         except Exception as e:
             QMessageBox.information(self, '失败', '计算运费出现问题', QMessageBox.Yes, QMessageBox.Yes)
             traceback.print_exc()
@@ -231,10 +234,15 @@ class Split(QMainWindow):
         l4 = []
         try:
             for _, row in self.__df.iterrows():
-                transFee = self.__calTransFee(row, self.__addressField, self.__weighField)
-                paperBoxFee = self.__calPaperBoxFee(row)
-                packFee = self.__calPackFee(row)
-                valueAddFee = self.__calDeliveryFee(row)
+                transFee = paperBoxFee = packFee = valueAddFee = '-'
+                if self.ui.isCalTransFee.isChecked():
+                    transFee = self.__calTransFee(row, self.__addressField, self.__weighField)
+                if self.ui.isCalPaperBoxFee.isChecked():
+                    paperBoxFee = self.__calPaperBoxFee(row)
+                if self.ui.isCalPackFee.isChecked():
+                    packFee = self.__calPackFee(row)
+                if self.ui.isCalValueAddFee.isChecked():
+                    valueAddFee = self.__calDeliveryFee(row)
 
                 l1.append(transFee)
                 l2.append(paperBoxFee)
