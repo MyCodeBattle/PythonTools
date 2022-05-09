@@ -24,7 +24,7 @@ class Split(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle('Excel Utils for choose v3.1 by zhuolx')
+        self.setWindowTitle('Excel Utils for choose v3.5 by zhuolx')
         self.ui.loadButton.clicked.connect(self.__loadExcel)
         self.ui.sheetComboBox.activated[str].connect(self.__loadSheets)
         self.ui.splitButton.clicked.connect(self.__splitFields)
@@ -118,7 +118,7 @@ class Split(QMainWindow):
         try:
             curFeeDf = self.__paperBoxFeeDfs[row['仓库']]
             ntype = row['纸箱型号']
-            return round(float(curFeeDf[curFeeDf['类型'] == ntype]['费用'].values[0]), 2)
+            return float(curFeeDf[curFeeDf['类型'] == ntype]['费用'].values[0])
         except Exception as e:
             traceback.print_exc()
             self.showBox('可能存在型号为空的数据')
@@ -135,7 +135,7 @@ class Split(QMainWindow):
             add = row[self.__addressField].split()[0]
             if add in curFeeDf.columns:
                 fee = curFeeDf[add].values[0]
-            return round(float(fee), 2)
+            return float(fee)
         except Exception as e:
             traceback.print_exc()
             return self.INF
@@ -161,7 +161,7 @@ class Split(QMainWindow):
                 if eval(gap):
                     info = eval(curFeeDf[gap].values[0])
                     cur += info
-            return round(cur, 2)
+            return cur
         except Exception as e:
             traceback.print_exc()
             return self.INF
@@ -214,7 +214,7 @@ class Split(QMainWindow):
                             raise Exception('计算出错')
 
                 fee = eval(info)
-            return round(fee, 2)
+            return fee
         except Exception as e:
             QMessageBox.information(self, '失败', '计算运费出现问题', QMessageBox.Yes, QMessageBox.Yes)
             traceback.print_exc()
