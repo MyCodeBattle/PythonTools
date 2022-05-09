@@ -9,9 +9,6 @@ import traceback
 from loguru import logger
 import arrow
 
-
-
-
 class Split(QMainWindow):
 
     def showBox(self, msg):
@@ -232,7 +229,10 @@ class Split(QMainWindow):
         l2 = []
         l3 = []
         l4 = []
+        ntotal = self.__df.shape[0]
+        bar = tqdm.tqdm(total=ntotal, ncols=200)
         try:
+
             for _, row in self.__df.iterrows():
                 transFee = paperBoxFee = packFee = valueAddFee = '-'
                 if self.ui.isCalTransFee.isChecked():
@@ -248,11 +248,14 @@ class Split(QMainWindow):
                 l2.append(paperBoxFee)
                 l3.append(packFee)
                 l4.append(valueAddFee)
+                bar.update(1)
             apDf = pd.DataFrame({'运费计算': l1, '包材费计算': l2, '打包费计算': l3, '增值服务计算': l4})
             self.__df = pd.concat([self.__df, apDf], axis=1)
         except Exception as e:
             traceback.print_exc()
             return
+        finally:
+            bar.close()
 
         try:
             self.__df.to_excel(f'终极生成-{arrow.now().minute}.xlsx', index=False)
