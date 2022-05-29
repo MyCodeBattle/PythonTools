@@ -1,4 +1,5 @@
 from ui.SplitUI import *
+import time
 import pathlib
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
@@ -8,6 +9,7 @@ import math
 import traceback
 from loguru import logger
 import arrow
+import BackAnalyseUtils
 
 class Split(QMainWindow):
 
@@ -15,13 +17,13 @@ class Split(QMainWindow):
         QMessageBox.information(self, '提示', msg, QMessageBox.Yes, QMessageBox.Yes)
 
     def showErrorBox(self, msg):
-        QMessageBox.Warning(self, '有问题', msg, QMessageBox.Yes, QMessageBox.Yes)
+        QMessageBox.warning(self, '有问题', msg, QMessageBox.Yes, QMessageBox.Yes)
 
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle('Excel Utils for choose v3.5 by zhuolx')
+        self.setWindowTitle('Excel Utils for choose v4.0 by zhuolx')
         self.ui.loadButton.clicked.connect(self.__loadExcel)
         self.ui.sheetComboBox.activated[str].connect(self.__loadSheets)
         self.ui.splitButton.clicked.connect(self.__splitFields)
@@ -30,6 +32,7 @@ class Split(QMainWindow):
         self.ui.feeLoadButton.clicked.connect(self.__loadFeeExcel)
         self.ui.totalCalculate.clicked.connect(self.__calTotalFee)
         self.ui.mergeNumberButton.clicked.connect(self.__mergeDh)   # 合并编码
+        self.ui.backAnalyse.clicked.connect(self.__backAnalyse)
 
         self.__weighField = ''
         self.__addressField = ''
@@ -292,6 +295,26 @@ class Split(QMainWindow):
 
         pd.DataFrame(totalDf).to_excel(f'合并货品和编码.xlsx', index=False)
         QMessageBox.information(self, '成功', '编码已合并完成！', QMessageBox.Yes, QMessageBox.Yes)
+
+    def __backAnalyse(self):
+        if self.__df is None:
+            self.showErrorBox('文件未载入')
+            return
+
+        if '单号' not in self.__df.columns:
+            self.showErrorBox('找不到单号字段')
+            return
+        bar = tqdm.tqdm(total=self.__df.shape[0], ncols=150)
+        utils = BackAnalyseUtils.BackAnalyseUtils()
+        ans = []
+        for dh in self.__df['单号']:
+            time.sleep(2)
+            ans.append(utils.analyse(dh))
+            bar.update(1)
+        self.__df['退回分析'] = ans
+        self.__df.to_excel(f'{pathlib.Path(self.ui.lineEdit.text()).stem}退回分析.xlsx', index=False)
+        bar.close()
+        self.showBox('分析完成！')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
