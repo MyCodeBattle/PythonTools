@@ -26,14 +26,17 @@ class BackAnalyseUtils:
         '''
         try:
             cent = self.getContent(str(dh))
+            resp = json.loads(cent)
         except Exception as e:
             traceback.print_exc()
             logger.error('网络连接出现错误')
             return 'ERROR'
         if '退回妥投' in cent:
             return '已退回'
+        if '查无结果' in cent:
+            return '查无结果'
 
-        return ''
+        return resp['message'] if not resp['data'] else resp['data'][0]['context']
 
     def getContent(self, postid):
         headers = {
@@ -57,6 +60,9 @@ class BackAnalyseUtils:
 
         response = requests.post("https://www.kuaidi100.com/autonumber/autoComNum?text=" + postid, headers=headers)
         typeReault = response.json()
+        if typeReault['auto'][0]['comCode'] == 'youzhengguonei':
+            typeReault['auto'][0]['comCode'] = 'EMS'    #强行替换成EMS
+
         params = {
             'type': typeReault['auto'][0]['comCode'],
             'postid': postid,
@@ -83,12 +89,13 @@ class BackAnalyseUtils:
 
 if __name__ == '__main__':
     a = BackAnalyseUtils()
-    a.getCsrfToken()
-    df = pd.read_excel('四月单号.xlsx', dtype=str)
+    # a.analyse('9869248262253')
+    df = pd.read_excel('逆向退货费.xlsx', dtype=str)
     for dh in df['单号']:
         try:
             time.sleep(2)
-            words = a.analyse(dh)
+            words = a.analyse(dh.strip())
+            logger.error(words)
             if '退回妥投' in words:
                 logger.info(f'单号：{dh}退回妥投')
         except Exception as e:

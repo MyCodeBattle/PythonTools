@@ -23,7 +23,7 @@ class Split(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle('Excel Utils for choose v4.0 by zhuolx')
+        self.setWindowTitle('Excel Utils for choose v4.1 by zhuolx')
         self.ui.loadButton.clicked.connect(self.__loadExcel)
         self.ui.sheetComboBox.activated[str].connect(self.__loadSheets)
         self.ui.splitButton.clicked.connect(self.__splitFields)
@@ -154,7 +154,7 @@ class Split(QMainWindow):
             curFeeDf = self.__packFeeDfs[row['仓库']]
 
             cur = 0
-            wei = math.ceil(float(row[self.ui.weighComboBox.currentText()]))
+            wei = float(row[self.ui.weighComboBox.currentText()])
             quantity = int(row['货品数量'])
 
             for gap in curFeeDf.columns:
