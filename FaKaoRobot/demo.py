@@ -13,6 +13,9 @@ class FrontCodes:
         self.__ques = None
         self.__isRead = set()
 
+    def __del__(self):
+        self.__sendMsg('我溜了')
+
     def __sendMsg(self, msg):
         WxUtils.SetClipboard(msg)  # 将内容复制到剪贴板，类似于Ctrl + C
         self.wx.SendClipboard()  # 发送剪贴板的内容，类似于Ctrl + V
@@ -36,22 +39,24 @@ class FrontCodes:
 
     def __judge(self, name: str, msgs: str):
         print(msgs)
-        if '我要刷题' in msgs:
+        if '开始刷题' in msgs:
             if self.__isShuati: #如果有正在进行的刷题，忽略
                 self.__sendMsg(f'@{name} 现在有正在进行的刷题！')
                 return
 
-            self.wx.SendMsg('刷题开始！')
             self.__getQuestion()
             self.__isShuati = True
 
-        elif msgs.isalpha():
-            if not self.__isAnswerQuestion(msgs):
+        elif msgs.encode('utf-8').isalpha():
+            if not self.__isAnswerQuestion(msgs):   #如果是闲聊，不管他
                 return
+
             if self.__robot.checkAns(msgs):
                 self.__sendMsg(f'@【{name}】回答正确！答案为{self.__ques["答案"]}！五秒后进入下一题')
                 time.sleep(5)
                 self.__getQuestion()
+            else:
+                self.__sendMsg(f'@{name} 错，继续想！')
                 return
 
 
@@ -61,7 +66,7 @@ class FrontCodes:
 
         # 获取会话列表
 
-        msg = '大家好我是刷题机器人~'
+        msg = '大家好我是刷题机器人，我活了。'
         who = '加油法考人'
         # self.wx.ChatWith(who)  # 打开`文件传输助手`聊天窗口
         self.wx.SendMsg(msg)  # 向`文件传输助手`发送消息：你好~
