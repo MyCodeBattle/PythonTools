@@ -3,15 +3,17 @@ import json
 import arrow
 import pathlib
 import requests
+import os
 from loguru import logger
 
 
 class FengxianBot:
     def __init__(self):
+
         with open('token.txt', 'r') as fp:
             token = fp.read()
         self.url = f'https://openplatform-pro.ding.zj.gov.cn/robot/send?access_token={token}'
-        self.__map = set()  # 存城市对应的风险地区
+        self.__bot = DingtalkChatbot(self.url)
         pass
 
     def analyseArea(self, riskList):
@@ -23,29 +25,15 @@ class FengxianBot:
 
         st = set()
         for area in riskList:
-            areaName = area['area_name'].replace('省直辖县级行政单位', '').replace(' ', '')
+            if area['province'] == area['city']:
+                area['city'] = ''
+            if area['city'] == '省直辖县级行政单位':
+                area['city'] = ''
+            areaName = area['province'] + area['city'] + area['county']
             for c in area['communitys']:
                 st.add(areaName + c)
         return st
 
-
-    def run(self, totalStr):
-        self.__bot = DingtalkChatbot(self.url)
-        # c = bot.send_text('大家好，我是风险地区提醒小助手，我又复活了')
-        # print(c)
-
-        midRiskPos = totalStr.find('中风险区')
-
-        highRiskStr = totalStr[:midRiskPos].split()
-        midRiskStr = totalStr[midRiskPos:]
-        midRiskStr = midRiskStr[midRiskStr.find('：') + 1:].split()
-
-        midRiskAreaMap = self.analyseArea(midRiskStr)
-        highRiskAreaMap = self.analyseArea(highRiskStr)
-
-        # 总结句
-        # bot.send_text(inWords)
-        return highRiskAreaMap, midRiskAreaMap
 
     def fetchLatest(self):
 
@@ -83,36 +71,39 @@ class FengxianBot:
         todayHighRisk, todayMidRisk = self.fetchLatest()
 
         date = arrow.now().shift(days=-1)
-        path = pathlib.Path('.').glob(f'{date.month}月{date.day}日.txt')
-        yesterdayStr = sorted(path, key=lambda a: a.stat().st_mtime)[0]
-
-        with yesterdayStr.open('r') as fp:
+        with open(f'{date.month}月{date.day}日.txt', 'r') as fp:
             yesMp = eval(fp.read())
             yesMidRisk = yesMp['中风险']
             yesHighRisk = yesMp['高风险']
 
-        reduceMidRiskArea = '\n'.join(sorted(yesMidRisk.difference(todayMidRisk)))  # 减少的地区
-        reduceHighRiskArea = '\n'.join(sorted(yesHighRisk.difference(todayHighRisk)))  # 减少的高风险地区
-        increaseMidRiskArea = '\n'.join(sorted(todayMidRisk.difference(yesMidRisk)))  # 增加的中风险
-        increaseHighRiskArea = '\n'.join(sorted(todayHighRisk.difference(yesHighRisk)))  # 增加的高风险
-        # self.__bot.send_text('每日风险地区动态播报：\n' + self.__inWords)
+        reduceMidRiskArea = '\n\n'.join(sorted(yesMidRisk.difference(todayMidRisk)))  # 减少的地区
+        reduceHighRiskArea = '\n\n'.join(sorted(yesHighRisk.difference(todayHighRisk)))  # 减少的高风险地区
+        increaseMidRiskArea = '\n\n'.join(sorted(todayMidRisk.difference(yesMidRisk)))  # 增加的中风险
+        increaseHighRiskArea = '\n\n'.join(sorted(todayHighRisk.difference(yesHighRisk)))  # 增加的高风险
 
-        words = '较昨日减少的高风险地区：\n'
-        words += reduceHighRiskArea
-        print(words)
-        # self.__bot.send_text(words)
 
-        words = '较昨日减少的中风险地区：\n'
-        words += reduceMidRiskArea
-        # self.__bot.send_text(words)
 
-        words = '较昨日增加的高风险地区：\n'
-        words += increaseHighRiskArea
-        # self.__bot.send_text(words)
+        words = '# 较昨日减少的高风险地区：\n'
+        words += reduceHighRiskArea + '\n\n'
+        # print(words)
 
-        words = '较昨日增加的中风险地区：\n'
-        words += increaseMidRiskArea
-        # self.__bot.send_text(words)
+        words += '# 较昨日减少的中风险地区：\n'
+        words += reduceMidRiskArea + '\n\n'
+
+        words += '# 较昨日增加的高风险地区：\n'
+        words += increaseHighRiskArea + '\n\n'
+        # print(words)
+
+        words += '# 较昨日增加的中风险地区：\n'
+        words += increaseMidRiskArea + '\n\n'
+
+        # rep = os.popen(
+        #     f'''curl -X POST -d 'api_dev_key=3MYEHqc7-Or2hjNPhxJsW4vwsL_5yyxX' -d 'api_paste_code={words}' -d 'api_paste_format=markdown' -d 'api_option=paste'  "https://pastebin.com/api/api_post.php"''')
+        rep = os.popen(f'''curl -X POST -F "format=url" -F "content={words}" -F "lexer=_markdown" https:/dpaste.org/api/''')
+        links = rep.read()
+        print(links)
+        self.__bot.send_text(
+            '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links}')
 
 
 
