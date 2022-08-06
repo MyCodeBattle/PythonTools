@@ -1,10 +1,8 @@
 from dingtalkchatbot.chatbot import *
 import json
 import arrow
-import pathlib
 import requests
 import os
-from loguru import logger
 
 
 class FengxianBot:
