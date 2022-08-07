@@ -1,5 +1,6 @@
 from dingtalkchatbot.chatbot import *
 import json
+from loguru import logger
 import arrow
 import requests
 import os
@@ -99,9 +100,10 @@ class FengxianBot:
         #     f'''curl -X POST -d 'api_dev_key=3MYEHqc7-Or2hjNPhxJsW4vwsL_5yyxX' -d 'api_paste_code={words}' -d 'api_paste_format=markdown' -d 'api_option=paste'  "https://pastebin.com/api/api_post.php"''')
         rep = os.popen(f'''curl -X POST -F "format=url" -F "content={words}" -F "lexer=_markdown" https:/dpaste.org/api/''')
         links = rep.read()
-        print(links)
-        self.__bot.send_text(
+        logger.debut(links)
+        res = self.__bot.send_text(
             '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links}')
+        logger.debug(res)
 
 
 
