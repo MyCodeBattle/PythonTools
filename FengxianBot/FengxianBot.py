@@ -10,7 +10,7 @@ class FengxianBot:
     def __init__(self):
 
         with open('token.txt', 'r') as fp:
-            token = fp.read()
+            token = fp.read().strip()
         self.url = f'https://openplatform-pro.ding.zj.gov.cn/robot/send?access_token={token}'
         self.__bot = DingtalkChatbot(self.url)
         pass
