@@ -106,9 +106,9 @@ class FengxianBot:
         logger.debug(res)
 
 
-
-a = FengxianBot()
-# a.guowuyuan()
-a.entry()
-# a.run()
-# a.fetchLatest()
+if __name__ == '__main__':
+    while True:
+        if arrow.now().hour == 12 or arrow.now().hour == 21:
+            a = FengxianBot()
+            a.entry()
+        time.sleep(3600)
