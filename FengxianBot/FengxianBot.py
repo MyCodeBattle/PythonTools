@@ -111,4 +111,5 @@ if __name__ == '__main__':
         if arrow.now().hour == 12 or arrow.now().hour == 21:
             a = FengxianBot()
             a.entry()
+        logger.info('活着')
         time.sleep(3600)
