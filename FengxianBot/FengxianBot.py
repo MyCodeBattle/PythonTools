@@ -4,6 +4,7 @@ from loguru import logger
 import arrow
 import requests
 import os
+import GetData
 
 
 class FengxianBot:
@@ -36,26 +37,27 @@ class FengxianBot:
 
     def fetchLatest(self):
 
-        cookies = {
-            'Hm_lvt_ece58dbd46906f2a1a152da450de76ac': '1659762786',
-            'Hm_lpvt_ece58dbd46906f2a1a152da450de76ac': '1659762786',
-        }
+        # cookies = {
+        #     'Hm_lvt_ece58dbd46906f2a1a152da450de76ac': '1659762786',
+        #     'Hm_lpvt_ece58dbd46906f2a1a152da450de76ac': '1659762786',
+        # }
+        #
+        # headers = {
+        #     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        #     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-US;q=0.7',
+        #     'Cache-Control': 'max-age=0',
+        #     # Requests sorts cookies= alphabetically
+        #     # 'Cookie': 'Hm_lvt_ece58dbd46906f2a1a152da450de76ac=1659762786; Hm_lpvt_ece58dbd46906f2a1a152da450de76ac=1659762786',
+        #     'DNT': '1',
+        #     'Proxy-Connection': 'keep-alive',
+        #     'Referer': 'http://diqu.gezhong.vip/',
+        #     'Upgrade-Insecure-Requests': '1',
+        #     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
+        # }
+        #
+        # response = requests.get('http://diqu.gezhong.vip/api.php', cookies=cookies, headers=headers, verify=False)
 
-        headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-US;q=0.7',
-            'Cache-Control': 'max-age=0',
-            # Requests sorts cookies= alphabetically
-            # 'Cookie': 'Hm_lvt_ece58dbd46906f2a1a152da450de76ac=1659762786; Hm_lpvt_ece58dbd46906f2a1a152da450de76ac=1659762786',
-            'DNT': '1',
-            'Proxy-Connection': 'keep-alive',
-            'Referer': 'http://diqu.gezhong.vip/',
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
-        }
-
-        response = requests.get('http://diqu.gezhong.vip/api.php', cookies=cookies, headers=headers, verify=False)
-        self.__today = json.loads(response.text)
+        self.__today = json.loads(GetData.get_datas())
         highList = self.__today['data']['highlist']
         midList = self.__today['data']['middlelist']
         now = arrow.now()
