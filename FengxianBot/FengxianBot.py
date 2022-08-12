@@ -109,9 +109,13 @@ class FengxianBot:
 
 
 if __name__ == '__main__':
-    while True:
-        if arrow.now().hour == 12 or arrow.now().hour == 21:
-            a = FengxianBot()
-            a.entry()
-        logger.info('活着')
-        time.sleep(3600)
+    # while True:
+    #     if arrow.now().hour == 12 or arrow.now().hour == 21:
+    #         a = FengxianBot()
+    #         a.entry()
+    #     logger.info('活着')
+    #     time.sleep(3600)
+
+    a = FengxianBot()
+    a.entry()
+
