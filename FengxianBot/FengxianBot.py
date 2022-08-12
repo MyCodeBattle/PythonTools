@@ -56,8 +56,8 @@ class FengxianBot:
         # }
         #
         # response = requests.get('http://diqu.gezhong.vip/api.php', cookies=cookies, headers=headers, verify=False)
-
-        self.__today = json.loads(GetData.get_datas())
+        dataBot = GetData.WjjFXDQ()
+        self.__today = json.loads(dataBot.get_datas())
         highList = self.__today['data']['highlist']
         midList = self.__today['data']['middlelist']
         now = arrow.now()
@@ -109,13 +109,13 @@ class FengxianBot:
 
 
 if __name__ == '__main__':
-    while True:
-        if (arrow.now().hour == 12 and arrow.now().minute == 0) or (arrow.now().hour == 21 and arrow.now().minute == 0):
-            a = FengxianBot()
-            a.entry()
-        logger.info('活着')
-        time.sleep(60)
+    # while True:
+    #     if (arrow.now().hour == 12 and arrow.now().minute == 0) or (arrow.now().hour == 21 and arrow.now().minute == 0):
+    #         a = FengxianBot()
+    #         a.entry()
+    #     logger.info('活着')
+    #     time.sleep(60)
 
-    # a = FengxianBot()
-    # a.entry()
+    a = FengxianBot()
+    a.entry()
 
