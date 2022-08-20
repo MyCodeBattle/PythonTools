@@ -2,7 +2,7 @@ from dingtalkchatbot.chatbot import *
 import json
 from loguru import logger
 import arrow
-import requests
+from retrying import retry
 import os
 import GetData
 
@@ -33,7 +33,6 @@ class FengxianBot:
             for c in area['communitys']:
                 st.add(areaName + c)
         return st
-
 
     def fetchLatest(self):
 
@@ -82,8 +81,6 @@ class FengxianBot:
         increaseMidRiskArea = '\n\n'.join(sorted(todayMidRisk.difference(yesMidRisk)))  # 增加的中风险
         increaseHighRiskArea = '\n\n'.join(sorted(todayHighRisk.difference(yesHighRisk)))  # 增加的高风险
 
-
-
         words = '# 较昨日减少的高风险地区：\n'
         words += reduceHighRiskArea + '\n\n'
         # print(words)
@@ -100,22 +97,19 @@ class FengxianBot:
 
         # rep = os.popen(
         #     f'''curl -X POST -d 'api_dev_key=3MYEHqc7-Or2hjNPhxJsW4vwsL_5yyxX' -d 'api_paste_code={words}' -d 'api_paste_format=markdown' -d 'api_option=paste'  "https://pastebin.com/api/api_post.php"''')
-        rep = os.popen(f'''curl -X POST -F "format=url" -F "content={words}" -F "lexer=_markdown" https:/dpaste.org/api/''')
+        rep = os.popen(
+            f'''curl -X POST -F "format=url" -F "content={words}" -F "lexer=_markdown" https:/dpaste.org/api/''')
         links = rep.read()
         logger.debug(links)
         res = self.__bot.send_text(
             '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links}')
         logger.debug(res)
 
-
-if __name__ == '__main__':
-    while True:
-        if (arrow.now().hour == 12 and arrow.now().minute == 0) or (arrow.now().hour == 21 and arrow.now().minute == 0):
-            a = FengxianBot()
-            a.entry()
-        logger.info('活着')
-        time.sleep(60)
-
-    # a = FengxianBot()
-    # a.entry()
-
+    @retry(wait_fixed=60*1000, stop_max_attempt_number=3)
+    def start(self):
+        while True:
+            if (arrow.now().hour == 12 and arrow.now().minute == 0) or (
+                    arrow.now().hour == 21 and arrow.now().minute == 0):
+                self.entry()
+            logger.info('活着')
+            time.sleep(60)
