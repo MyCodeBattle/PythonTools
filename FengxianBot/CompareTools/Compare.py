@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
-import pandas.io.excel as pd
-import arrow.api
+import pandas as pd
+import arrow
 import sys
 
 from UI.FxUI import Ui_MainWindow
