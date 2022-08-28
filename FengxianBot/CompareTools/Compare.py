@@ -43,6 +43,10 @@ class Compare(QMainWindow):
         df1['合并地址'] = df1['地级市'] + df1['县市区'] + df1['具体点位']
         df2['合并地址'] = df2['地级市'] + df2['县市区'] + df2['具体点位']
 
+        df1['地址带政策'] = df1['地级市'] + df1['县市区'] + df1['具体点位'] + df1['健康管理措施']
+        df2['地址带政策'] = df2['地级市'] + df2['县市区'] + df2['具体点位'] + df2['健康管理措施']
+        changeDf = df2[df2['合并地址'].isin(df1['合并地址']) & (~df2['地址带政策'].isin(df1['地址带政策']))]
+
         df1Set = set(list(df1['合并地址']))
         df2Set = set(list(df2['合并地址']))
 
@@ -67,6 +71,7 @@ class Compare(QMainWindow):
         pd.DataFrame(increaseList).to_excel(writer, index=False, sheet_name='新增地区')
         pd.DataFrame(decreaseList).to_excel(writer, index=False, sheet_name='减少地区')
         pd.DataFrame(sameList).to_excel(writer, index=False, sheet_name='相同地区')
+        changeDf.to_excel(writer, index=False, sheet_name='政策变化地区')
 
         writer.save()
         self.showBox('成功')
