@@ -11,7 +11,7 @@ class Compare(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setWindowTitle('叶老师专用风险地区比对工具 v1.0')
+        self.setWindowTitle('叶老师专用风险地区比对工具 v2.0')
 
         self.ui.preFilePushButton.clicked.connect(self.__openPreFileDialog)
         self.ui.nextFilePushButton.clicked.connect(self.__openNextFileDialog)
