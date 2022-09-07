@@ -5,6 +5,7 @@ import arrow
 from retrying import retry
 import os
 import GetData
+import requests
 
 
 class FengxianBot:
@@ -67,6 +68,24 @@ class FengxianBot:
             fp.write(str({'高风险': high, '中风险': mid}))
         return high, mid
 
+    def __uploadAndSave(self, w1, w2, w3, w4):
+        '''
+        上传到在线文本文档
+        :param w1:
+        :param w2:
+        :param w3:
+        :param w4:
+        :return: links
+        '''
+
+        files = {
+            'format': (None, 'url'),
+            'content': (None, f'{w1}+"\n\n"+{w2}+\n\n+{w3}+\n\n+{w4}+\n\n'),
+            'lexer': (None, '_markdown'),
+        }
+        return requests.post('https://dpaste.org/api/', files=files).text
+
+    @retry(wait_fixed=60 * 1000, stop_max_attempt_number=3)
     def entry(self):
         todayHighRisk, todayMidRisk = self.fetchLatest()
 
@@ -81,35 +100,39 @@ class FengxianBot:
         increaseMidRiskArea = '\n\n'.join(sorted(todayMidRisk.difference(yesMidRisk)))  # 增加的中风险
         increaseHighRiskArea = '\n\n'.join(sorted(todayHighRisk.difference(yesHighRisk)))  # 增加的高风险
 
-        words = '# 较昨日减少的高风险地区：\n'
-        words += reduceHighRiskArea + '\n\n'
+        words1 = '# 较昨日减少的高风险地区：\n'
+        words1 += reduceHighRiskArea + '\n\n'
         # print(words)
 
-        words += '# 较昨日减少的中风险地区：\n'
-        words += reduceMidRiskArea + '\n\n'
+        words2 = '# 较昨日减少的中风险地区：\n'
+        words2 += reduceMidRiskArea + '\n\n'
 
-        words += '# 较昨日增加的高风险地区：\n'
-        words += increaseHighRiskArea + '\n\n'
+        words3 = '# 较昨日增加的高风险地区：\n'
+        words3 += increaseHighRiskArea + '\n\n'
         # print(words)
 
-        words += '# 较昨日增加的中风险地区：\n'
-        words += increaseMidRiskArea + '\n\n'
+        words4 = '# 较昨日增加的中风险地区：\n'
+        words4 += increaseMidRiskArea + '\n\n'
+
+        links = self.__uploadAndSave(words1, words2, words3, words4)
 
         # rep = os.popen(
         #     f'''curl -X POST -d 'api_dev_key=3MYEHqc7-Or2hjNPhxJsW4vwsL_5yyxX' -d 'api_paste_code={words}' -d 'api_paste_format=markdown' -d 'api_option=paste'  "https://pastebin.com/api/api_post.php"''')
-        rep = os.popen(
-            f'''curl -X POST -F "format=url" -F "content={words}" -F "lexer=_markdown" https:/dpaste.org/api/''')
-        links = rep.read()
         logger.debug(links)
-        res = self.__bot.send_text(
-            '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links}')
-        logger.debug(res)
+        # res = self.__bot.send_text(
+        #     '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links}')
+        # logger.debug(res)
 
-    @retry(wait_fixed=60*1000, stop_max_attempt_number=3)
     def start(self):
-        while True:
-            if (arrow.now().hour == 12 and arrow.now().minute == 0) or (
-                    arrow.now().hour == 21 and arrow.now().minute == 0):
-                self.entry()
-            logger.info('活着')
-            time.sleep(60)
+        self.entry()
+        # while True:
+        #     if (arrow.now().hour == 12 and arrow.now().minute == 0) or (
+        #             arrow.now().hour == 21 and arrow.now().minute == 0):
+        #         self.entry()
+        #     logger.info('活着')
+        #     time.sleep(60)
+
+
+if __name__ == '__main__':
+    a = FengxianBot()
+    a.entry()
