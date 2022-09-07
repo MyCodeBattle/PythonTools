@@ -123,14 +123,14 @@ class FengxianBot:
 
     def start(self):
         self.entry()
-        # while True:
-        #     if (arrow.now().hour == 12 and arrow.now().minute == 0) or (
-        #             arrow.now().hour == 21 and arrow.now().minute == 0):
-        #         self.entry()
-        #     logger.info('活着')
-        #     time.sleep(60)
+        while True:
+            if (arrow.now().hour == 12 and arrow.now().minute == 0) or (
+                    arrow.now().hour == 21 and arrow.now().minute == 0):
+                self.entry()
+            logger.info('活着')
+            time.sleep(60)
 
 
 if __name__ == '__main__':
     a = FengxianBot()
-    a.entry()
+    a.start()
