@@ -85,7 +85,7 @@ class FengxianBot:
         }
         return requests.post('https://dpaste.org/api/', files=files).text
 
-    @retry(wait_fixed=60 * 1000, stop_max_attempt_number=3)
+    @retry(wait_fixed=60 * 1000, stop_max_attempt_number=10)
     def entry(self):
         logger.info('进入执行程序...')
         todayHighRisk, todayMidRisk = self.fetchLatest()
