@@ -12,9 +12,14 @@ class FengxianBot:
     def __init__(self):
 
         with open('token.txt', 'r') as fp:
-            token = fp.read().strip()
+            lis = fp.readlines()
+            token = lis[0].strip()
+            token2 = lis[1].strip()
+
         self.url = f'https://openplatform-pro.ding.zj.gov.cn/robot/send?access_token={token}'
+        self.url2 = f'https://openplatform-pro.ding.zj.gov.cn/robot/send?access_token={token2}'
         self.__bot = DingtalkChatbot(self.url)
+        self.__bot2 = DingtalkChatbot(self.url2)
         pass
 
     def analyseArea(self, riskList):
@@ -119,6 +124,9 @@ class FengxianBot:
 
         logger.debug(links)
         res = self.__bot.send_text(
+            '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links.strip()}')
+
+        self.__bot2.send_text(
             '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links.strip()}')
         logger.debug(res)
 
