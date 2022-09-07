@@ -116,12 +116,10 @@ class FengxianBot:
 
         links = self.__uploadAndSave(words1, words2, words3, words4)
 
-        # rep = os.popen(
-        #     f'''curl -X POST -d 'api_dev_key=3MYEHqc7-Or2hjNPhxJsW4vwsL_5yyxX' -d 'api_paste_code={words}' -d 'api_paste_format=markdown' -d 'api_option=paste'  "https://pastebin.com/api/api_post.php"''')
         logger.debug(links)
-        # res = self.__bot.send_text(
-        #     '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links}')
-        # logger.debug(res)
+        res = self.__bot.send_text(
+            '每日风险地区动态播报：\n' + f'截至{self.__today["data"]["end_update_time"]}，今日新增高风险地区{len(todayHighRisk.difference(yesHighRisk))}个、中风险地区{len(todayMidRisk.difference(yesMidRisk))}个，今日减少高风险地区{len(yesHighRisk.difference(todayHighRisk))}个、中风险地区{len(yesMidRisk.difference(todayMidRisk))}个，详情参见{links.strip()}')
+        logger.debug(res)
 
     def start(self):
         self.entry()
