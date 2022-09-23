@@ -46,6 +46,11 @@ class FrontCodes:
 
             self.__getQuestion()
             self.__isShuati = True
+        if '跳过' in msgs:
+            if self.__isShuati:
+                self.__sendMsg('skip')
+                self.__getQuestion()
+                return
 
         elif msgs.encode('utf-8').isalpha():
             if not self.__isAnswerQuestion(msgs):   #如果是闲聊，不管他
@@ -81,7 +86,7 @@ class FrontCodes:
                 continue
             self.__judge(msgs[0], msgs[1])
             self.__isRead.add(msgs[2])
-            time.sleep(0.05)
+            time.sleep(0.01)
 
 
         # 向某人发送消息（以`文件传输助手`为例）
